@@ -13,7 +13,6 @@
 #include "Poco/Util/HelpFormatter.h"
 #include "Poco/Util/AbstractConfiguration.h"
 #include "Poco/AutoPtr.h"
-#include <iostream>
 // others
 #include "APIs.h"
 #include <iostream>
@@ -46,203 +45,237 @@ using Poco::AutoPtr;
 //    transport->close();
 //}
 
-class ViewCountClientApp: public Application
-	/// Try ViewCountClientApp --help (on Unix platforms) or ViewCountClientApp /help (elsewhere) for
-	/// more information.
+class ViewCountClientApp : public Application
+/// Try ViewCountClientApp --help (on Unix platforms) or ViewCountClientApp /help (elsewhere) for
+/// more information.
 {
 public:
-	ViewCountClientApp(): _helpRequested(false)
-	{
-	}
 
-protected:	
-	void initialize(Application& self)
-	{
-		loadConfiguration(); // load default configuration files, if present
-		Application::initialize(self);
-	}
-	
-	void uninitialize()
-	{
-		Application::uninitialize();
-	}
-	
-	void reinitialize(Application& self)
-	{
-		Application::reinitialize(self);
-	}
-	
-	void defineOptions(OptionSet& options)
-	{
-		Application::defineOptions(options);
+    ViewCountClientApp() : _helpRequested(false) {
+    }
 
-		options.addOption(
-			Option("help", "h", "display help information on command line arguments")
-				.required(false)
-				.repeatable(false)
-				.callback(OptionCallback<ViewCountClientApp>(this, &ViewCountClientApp::handleHelp)));
-                
-                options.addOption(
-                        Option("mode", "m", "select a run mode for the ViewCount client\n"
-                        "if using the get API => [api]=get\n"
-                        "if using the put API => [api]=put\n"
-                        "if using the increase API => [api]=increase\n"
-                        "if using the ping API => [api]=ping\n")
-                            .required(false)
-                            .repeatable(false)
-                            .argument("[api]")
-                            .callback(OptionCallback<ViewCountClientApp>(this, &ViewCountClientApp::handleMode)));
-		
-//                options.addOption(
-//			Option("define", "D", "define a configuration property")
-//				.required(false)
-//				.repeatable(true)
-//				.argument("name=value")
-//				.callback(OptionCallback<ViewCountClientApp>(this, &ViewCountClientApp::handleDefine)));
-//				
-//		options.addOption(
-//			Option("config-file", "f", "load configuration data from a file")
-//				.required(false)
-//				.repeatable(true)
-//				.argument("file")
-//				.callback(OptionCallback<ViewCountClientApp>(this, &ViewCountClientApp::handleConfig)));
-//
-//		options.addOption(
-//			Option("bind", "b", "bind option value to test.property")
-//				.required(false)
-//				.repeatable(false)
-//				.argument("value")
-//				.binding("test.property"));
-	}
-	
-	void handleHelp(const std::string& name, const std::string& value)
-	{
-		_helpRequested = true;
-		displayHelp();
-		stopOptionsProcessing();
-	}
+protected:
+
+    void initialize(Application& self) {
+        loadConfiguration(); // load default configuration files, if present
+        Application::initialize(self);
+    }
+
+    void uninitialize() {
+        Application::uninitialize();
+    }
+
+    void reinitialize(Application& self) {
+        Application::reinitialize(self);
+    }
+
+    void defineOptions(OptionSet& options) {
+        Application::defineOptions(options);
+
+        options.addOption(
+                Option("help", "h", "display help information on command line arguments")
+                .required(false)
+                .repeatable(false)
+                .callback(OptionCallback<ViewCountClientApp>(this, &ViewCountClientApp::handleHelp)));
+
+        options.addOption(
+                Option("ping", "P", "attempt a PING request to the server\n")
+                .required(false)
+                .repeatable(false)
+                .callback(OptionCallback<ViewCountClientApp>(this, &ViewCountClientApp::handlePingAPI)));
+
+        options.addOption(
+                Option("get", "g", "attempt a GET request to the server\n"
+                "[username]: string")
+                .required(false)
+                .repeatable(false)
+                .argument("[username]")
+                .callback(OptionCallback<ViewCountClientApp>(this, &ViewCountClientApp::handleGetAPI)));
+
+        options.addOption(
+                Option("put", "p", "attempt a PUT request to the server\n"
+                "[username]: string, [number]: integer")
+                .required(false)
+                .repeatable(false)
+                .argument("[username]=[number]")
+                .callback(OptionCallback<ViewCountClientApp>(this, &ViewCountClientApp::handlePutAPI)));
+
+        options.addOption(
+                Option("increase", "i", "attempt an INCREASE request to the server\n"
+                "[username]: string")
+                .required(false)
+                .repeatable(false)
+                .argument("[username]")
+                .callback(OptionCallback<ViewCountClientApp>(this, &ViewCountClientApp::handleIncAPI)));
+
+        //                options.addOption(
+        //			Option("define", "D", "define a configuration property")
+        //				.required(false)
+        //				.repeatable(true)
+        //				.argument("name=value")
+        //				.callback(OptionCallback<ViewCountClientApp>(this, &ViewCountClientApp::handleDefine)));
+        //				
+        //		options.addOption(
+        //			Option("config-file", "f", "load configuration data from a file")
+        //				.required(false)
+        //				.repeatable(true)
+        //				.argument("file")
+        //				.callback(OptionCallback<ViewCountClientApp>(this, &ViewCountClientApp::handleConfig)));
+        //
+        //		options.addOption(
+        //			Option("bind", "b", "bind option value to test.property")
+        //				.required(false)
+        //				.repeatable(false)
+        //				.argument("value")
+        //				.binding("test.property"));
+    }
+
+    void handleHelp(const std::string& name, const std::string& value) {
+        _helpRequested = true;
+        displayHelp();
+        stopOptionsProcessing();
+    }
+    
+    void handlePingAPI(const std::string& name, const std::string& value) {
+        boost::shared_ptr<TTransport> socket(new TSocket("localhost", 9090));
+        boost::shared_ptr<TTransport> transport(new TBufferedTransport(socket));
+        boost::shared_ptr<TProtocol> protocol(new TBinaryProtocol(transport));
+        APIsClient client(protocol);
+        transport->open();
+        cout << "Make a PING request" << endl;
+        bool res = client.ping();
+        if (res){
+            cout << "ping OK." << endl;
+        } else {
+            cout << "ping failed." << endl;
+        } 
         
-        void displayHelp()
-	{
-		HelpFormatter helpFormatter(options());
-		helpFormatter.setCommand(commandName());
-		helpFormatter.setUsage("OPTIONS");
-		helpFormatter.setHeader("A sample application that counts the number of viewers of a page.");
-		helpFormatter.format(std::cout);
-	}
-	
-        void handleMode(const std::string& name, const std::string& value)
-        {
-            if (value == "get"){
-                doAPIs("get");
-            }
-            else if (value == "put"){
-                doAPIs("put");
-            }
-            else if (value == "increase"){
-                doAPIs("increase");
-            }
-            else if (value == "ping"){
-                doAPIs("ping");
-            }
-            else {
-                logger().error("Please enter 1 of the 4 APIs: put/get/increase/ping !");
-            }
-        }
-        void doAPIs(string api) {
-            boost::shared_ptr<TTransport> socket(new TSocket("localhost", 9090));
-            boost::shared_ptr<TTransport> transport(new TBufferedTransport(socket));
-            boost::shared_ptr<TProtocol> protocol(new TBinaryProtocol(transport));
-            APIsClient client(protocol);
-            transport->open();
-            if (api == "get"){
-                logger().information("client.get()");
-                client.get("username");
-            }
-            else if (api == "put"){
-                logger().information("client.put()");
-                client.put("username", 10);
-            }
-            else if (api == "increase"){
-                logger().information("client.increase()");
-                client.increase("username");
-            }
-            else if (api == "ping"){
-                logger().information("client.ping()");
-                client.ping();
-            }
-            transport->close();
-        }
-        
-//	void handleDefine(const std::string& name, const std::string& value)
-//	{
-//		defineProperty(value);
-//	}
-//	
-//	void handleConfig(const std::string& name, const std::string& value)
-//	{
-//		loadConfiguration(value);
-//	}
-//	
-//	void defineProperty(const std::string& def)
-//	{
-//		std::string name;
-//		std::string value;
-//		std::string::size_type pos = def.find('=');
-//		if (pos != std::string::npos)
-//		{
-//			name.assign(def, 0, pos);
-//			value.assign(def, pos + 1, def.length() - pos);
-//		}
-//		else name = def;
-//		config().setString(name, value);
-//	}
+        transport->close();
+    }
+    
+    void displayHelp() {
+        HelpFormatter helpFormatter(options());
+        helpFormatter.setCommand(commandName());
+        helpFormatter.setUsage("OPTIONS");
+        helpFormatter.setHeader("A sample application that counts the number of viewers of a page.");
+        helpFormatter.format(std::cout);
+    }
 
-	int main(const std::vector<std::string>& args)
-	{
-		if (!_helpRequested)
-		{       
-                        // print out the applied arguments
-//			logger().information("Arguments to main():");
-//			for (std::vector<std::string>::const_iterator it = args.begin(); it != args.end(); ++it)
-//			{
-//				logger().information(*it);
-//			}
-//			logger().information("Application properties:");
-//			printProperties("");
-		}
-		return Application::EXIT_OK;
-	}
-	
-//	void printProperties(const std::string& base)
-//	{
-//		AbstractConfiguration::Keys keys;
-//		config().keys(base, keys);
-//		if (keys.empty())
-//		{
-//			if (config().hasProperty(base))
-//			{
-//				std::string msg;
-//				msg.append(base);
-//				msg.append(" = ");
-//				msg.append(config().getString(base));
-//				logger().information(msg);
-//			}
-//		}
-//		else
-//		{
-//			for (AbstractConfiguration::Keys::const_iterator it = keys.begin(); it != keys.end(); ++it)
-//			{
-//				std::string fullKey = base;
-//				if (!fullKey.empty()) fullKey += '.';
-//				fullKey.append(*it);
-//				printProperties(fullKey);
-//			}
-//		}
-//	}
-	
+    void handleGetAPI(const std::string& name, const std::string& _username) {
+        boost::shared_ptr<TTransport> socket(new TSocket("localhost", 9090));
+        boost::shared_ptr<TTransport> transport(new TBufferedTransport(socket));
+        boost::shared_ptr<TProtocol> protocol(new TBinaryProtocol(transport));
+        APIsClient client(protocol);
+        transport->open();
+        cout << "Make a GET request" << endl;
+        cout << "username: " << _username << endl;
+        int res = client.get(_username);
+        cout << "> result = " << res << endl;
+        transport->close();
+    }
+
+    void handlePutAPI(const std::string& name, const std::string& _value) {
+        boost::shared_ptr<TTransport> socket(new TSocket("localhost", 9090));
+        boost::shared_ptr<TTransport> transport(new TBufferedTransport(socket));
+        boost::shared_ptr<TProtocol> protocol(new TBinaryProtocol(transport));
+        APIsClient client(protocol);
+        transport->open();
+        //TODO handle the input
+        std::string username;
+        std::string value;
+        std::string::size_type pos = _value.find('=');
+        if (pos != std::string::npos) {
+            username.assign(_value, 0, pos);
+            value.assign(_value, pos + 1, _value.length() - pos);
+        } else username = _value;
+        cout << "Make a PUT request" << endl;
+        cout << "username: " << username << endl;
+        cout << "number: " << value << endl;
+        client.put("A", 69);
+        cout << "done." << endl;
+        transport->close();
+    }
+
+    void handleIncAPI(const std::string& name, const std::string& _username) {
+        boost::shared_ptr<TTransport> socket(new TSocket("localhost", 9090));
+        boost::shared_ptr<TTransport> transport(new TBufferedTransport(socket));
+        boost::shared_ptr<TProtocol> protocol(new TBinaryProtocol(transport));
+        APIsClient client(protocol);
+        transport->open();
+        cout << "Make an INCREASE request" << endl;
+        cout << "username: " << _username << endl;
+        client.increase(_username);
+        cout << "done." << endl;
+        transport->close();
+    }
+
+    //	void handleDefine(const std::string& name, const std::string& value)
+    //	{
+    //		defineProperty(value);
+    //	}
+    //	
+    //	void handleConfig(const std::string& name, const std::string& value)
+    //	{
+    //		loadConfiguration(value);
+    //	}
+    //	
+    //	void defineProperty(const std::string& def)
+    //	{
+    //		std::string name;
+    //		std::string value;
+    //		std::string::size_type pos = def.find('=');
+    //		if (pos != std::string::npos)
+    //		{
+    //			name.assign(def, 0, pos);
+    //			value.assign(def, pos + 1, def.length() - pos);
+    //		}
+    //		else name = def;
+    //		config().setString(name, value);
+    //	}
+
+    int main(const std::vector<std::string>& args) {
+        if (!_helpRequested) {
+            // print out the applied arguments
+            //			logger().information("Arguments to main():");
+            //			for (std::vector<std::string>::const_iterator it = args.begin(); it != args.end(); ++it)
+            //			{
+            //				logger().information(*it);
+            //			}
+            //			logger().information("Application properties:");
+            //			printProperties("");
+        }
+        return Application::EXIT_OK;
+    }
+
+    //	void printProperties(const std::string& base)
+    //	{
+    //		AbstractConfiguration::Keys keys;
+    //		config().keys(base, keys);
+    //		if (keys.empty())
+    //		{
+    //			if (config().hasProperty(base))
+    //			{
+    //				std::string msg;
+    //				msg.append(base);
+    //				msg.append(" = ");
+    //				msg.append(config().getString(base));
+    //				logger().information(msg);
+    //			}
+    //		}
+    //		else
+    //		{
+    //			for (AbstractConfiguration::Keys::const_iterator it = keys.begin(); it != keys.end(); ++it)
+    //			{
+    //				std::string fullKey = base;
+    //				if (!fullKey.empty()) fullKey += '.';
+    //				fullKey.append(*it);
+    //				printProperties(fullKey);
+    //			}
+    //		}
+    //	}
+
 private:
-	bool _helpRequested;
+    bool _helpRequested;
 };
 
 
