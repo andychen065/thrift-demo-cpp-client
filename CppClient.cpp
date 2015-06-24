@@ -16,6 +16,7 @@
 // others
 #include "APIs.h"
 #include <iostream>
+#include <string>
 
 /*
  * USINGS
@@ -194,7 +195,7 @@ protected:
         cout << "Make a PUT request" << endl;
         cout << "username: " << username << endl;
         cout << "number: " << value << endl;
-        bool res = client.put("A", 69);
+        bool res = client.put(username, atoi( value.c_str() ));
         if (!res){
             cout << "! error when making a PUT request." << endl;
         }
