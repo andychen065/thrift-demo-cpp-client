@@ -170,7 +170,10 @@ protected:
         cout << "Make a GET request" << endl;
         cout << "username: " << _username << endl;
         int res = client.get(_username);
-        cout << "> result = " << res << endl;
+        if (res >= 0){
+            cout << "> result = " << res << endl;
+        }
+        else cout << "! error when making a GET request." << endl;
         transport->close();
     }
 
@@ -191,8 +194,11 @@ protected:
         cout << "Make a PUT request" << endl;
         cout << "username: " << username << endl;
         cout << "number: " << value << endl;
-        client.put("A", 69);
-        cout << "done." << endl;
+        bool res = client.put("A", 69);
+        if (!res){
+            cout << "! error when making a PUT request." << endl;
+        }
+        else cout << "done." << endl;
         transport->close();
     }
 
@@ -204,8 +210,11 @@ protected:
         transport->open();
         cout << "Make an INCREASE request" << endl;
         cout << "username: " << _username << endl;
-        client.increase(_username);
-        cout << "done." << endl;
+        bool res = client.increase(_username);
+        if (!res){
+            cout << "! error when making an INC request." << endl;
+        }
+        else cout << "done." << endl;
         transport->close();
     }
 
