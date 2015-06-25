@@ -114,6 +114,12 @@ protected:
                 .required(false)
                 .repeatable(false)
                 .callback(OptionCallback<ViewCountClientApp>(this, &ViewCountClientApp::handleLogicTest)));
+        
+        options.addOption(
+                Option("benchmarkTest", "b", "start benchmark testing for the server")
+                .required(false)
+                .repeatable(false)
+                .callback(OptionCallback<ViewCountClientApp>(this, &ViewCountClientApp::handleBenchmarkTest)));
 
         //                options.addOption(
         //			Option("define", "D", "define a configuration property")
@@ -310,6 +316,11 @@ protected:
             printf ("%s %d %s %d \n", "=>", nFailed, "logic test failed out of", total);
         }
         transport->close();
+    }
+    
+    void handleBenchmarkTest(const std::string& name, const std::string& value) {
+        cout << "hehe" << endl;
+        //TODO!
     }
 
     //	void handleDefine(const std::string& name, const std::string& value)
