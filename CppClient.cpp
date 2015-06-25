@@ -13,6 +13,8 @@
 #include "Poco/Util/HelpFormatter.h"
 #include "Poco/Util/AbstractConfiguration.h"
 #include "Poco/AutoPtr.h"
+#include "Poco/Runnable.h"
+#include "Poco/Thread.h"
 // others
 #include "APIs.h"
 #include <iostream>
@@ -35,6 +37,8 @@ using Poco::Util::HelpFormatter;
 using Poco::Util::AbstractConfiguration;
 using Poco::Util::OptionCallback;
 using Poco::AutoPtr;
+using Poco::Runnable;
+using Poco::Thread;
 
 //int main(int argc, char **argv) {
 //    boost::shared_ptr<TTransport> socket(new TSocket("localhost", 9090));
@@ -45,6 +49,27 @@ using Poco::AutoPtr;
 //    client.ping();
 //    transport->close();
 //}
+
+class MyWorker : public Runnable {
+public:
+
+    MyWorker(int k = -1) : Runnable(), n(k) {
+    }
+
+    virtual void run() {
+        boost::shared_ptr<TTransport> socket(new TSocket("localhost", 9090));
+        boost::shared_ptr<TTransport> transport(new TBufferedTransport(socket));
+        boost::shared_ptr<TProtocol> protocol(new TBinaryProtocol(transport));
+        APIsClient client(protocol);
+        transport->open();
+        int res = client.get("D");
+        printf("Thread %d, res = %d \n", n, res);
+        transport->close();
+    }
+
+private:
+    int n;
+};
 
 class ViewCountClientApp : public Application
 /// Try ViewCountClientApp --help (on Unix platforms) or ViewCountClientApp /help (elsewhere) for
@@ -162,7 +187,6 @@ protected:
         } else {
             cout << "ping failed." << endl;
         }
-
         transport->close();
     }
 
@@ -319,8 +343,15 @@ protected:
     }
     
     void handleBenchmarkTest(const std::string& name, const std::string& value) {
-        cout << "hehe" << endl;
         //TODO!
+        const int N = 5;
+        MyWorker w[N];
+        for (int i = 0; i < N; i++) w[i] = MyWorker(i);
+        Thread t[N];
+        for (int i = 0; i < N; i++) t[i].start(w[i]);
+        for (int i = 0; i < N; i++) t[i].join(); // wait for all threads to end
+
+        cout << endl << "Threads joined" << endl;
     }
 
     //	void handleDefine(const std::string& name, const std::string& value)
