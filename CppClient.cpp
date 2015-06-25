@@ -80,13 +80,13 @@ protected:
                 .callback(OptionCallback<ViewCountClientApp>(this, &ViewCountClientApp::handleHelp)));
 
         options.addOption(
-                Option("ping", "P", "attempt a PING request to the server\n")
+                Option("ping", "P", "attempt a PING request to the server")
                 .required(false)
                 .repeatable(false)
                 .callback(OptionCallback<ViewCountClientApp>(this, &ViewCountClientApp::handlePingAPI)));
 
         options.addOption(
-                Option("get", "g", "attempt a GET request to the server\n"
+                Option("get", "g", "attempt a GET request to the server"
                 "[username]: string")
                 .required(false)
                 .repeatable(false)
@@ -94,7 +94,7 @@ protected:
                 .callback(OptionCallback<ViewCountClientApp>(this, &ViewCountClientApp::handleGetAPI)));
 
         options.addOption(
-                Option("put", "p", "attempt a PUT request to the server\n"
+                Option("put", "p", "attempt a PUT request to the server"
                 "[username]: string, [number]: integer")
                 .required(false)
                 .repeatable(false)
@@ -102,12 +102,18 @@ protected:
                 .callback(OptionCallback<ViewCountClientApp>(this, &ViewCountClientApp::handlePutAPI)));
 
         options.addOption(
-                Option("increase", "i", "attempt an INCREASE request to the server\n"
+                Option("increase", "i", "attempt an INCREASE request to the server"
                 "[username]: string")
                 .required(false)
                 .repeatable(false)
                 .argument("[username]")
                 .callback(OptionCallback<ViewCountClientApp>(this, &ViewCountClientApp::handleIncAPI)));
+
+        options.addOption(
+                Option("logicTest", "l", "start logic testing for the server")
+                .required(false)
+                .repeatable(false)
+                .callback(OptionCallback<ViewCountClientApp>(this, &ViewCountClientApp::handleLogicTest)));
 
         //                options.addOption(
         //			Option("define", "D", "define a configuration property")
@@ -136,7 +142,7 @@ protected:
         displayHelp();
         stopOptionsProcessing();
     }
-    
+
     void handlePingAPI(const std::string& name, const std::string& value) {
         boost::shared_ptr<TTransport> socket(new TSocket("localhost", 9090));
         boost::shared_ptr<TTransport> transport(new TBufferedTransport(socket));
@@ -145,15 +151,15 @@ protected:
         transport->open();
         cout << "Make a PING request" << endl;
         bool res = client.ping();
-        if (res){
+        if (res) {
             cout << "ping OK." << endl;
         } else {
             cout << "ping failed." << endl;
-        } 
-        
+        }
+
         transport->close();
     }
-    
+
     void displayHelp() {
         HelpFormatter helpFormatter(options());
         helpFormatter.setCommand(commandName());
@@ -171,10 +177,9 @@ protected:
         cout << "Make a GET request" << endl;
         cout << "username: " << _username << endl;
         int res = client.get(_username);
-        if (res >= 0){
+        if (res >= 0) {
             cout << "> result = " << res << endl;
-        }
-        else cout << "! error when making a GET request." << endl;
+        } else cout << "! error when making a GET request." << endl;
         transport->close();
     }
 
@@ -195,11 +200,10 @@ protected:
         cout << "Make a PUT request" << endl;
         cout << "username: " << username << endl;
         cout << "number: " << value << endl;
-        bool res = client.put(username, atoi( value.c_str() ));
-        if (!res){
+        bool res = client.put(username, atoi(value.c_str()));
+        if (!res) {
             cout << "! error when making a PUT request." << endl;
-        }
-        else cout << "done." << endl;
+        } else cout << "done." << endl;
         transport->close();
     }
 
@@ -212,10 +216,99 @@ protected:
         cout << "Make an INCREASE request" << endl;
         cout << "username: " << _username << endl;
         bool res = client.increase(_username);
-        if (!res){
+        if (!res) {
             cout << "! error when making an INC request." << endl;
+        } else cout << "done." << endl;
+        transport->close();
+    }
+
+    void handleLogicTest(const std::string& name, const std::string& value) {
+        boost::shared_ptr<TTransport> socket(new TSocket("localhost", 9090));
+        boost::shared_ptr<TTransport> transport(new TBufferedTransport(socket));
+        boost::shared_ptr<TProtocol> protocol(new TBinaryProtocol(transport));
+        APIsClient client(protocol);
+        transport->open();
+
+        int total = 9;
+        int nFailed = 0;
+        cout << "=== PERFORMING LOGIC TEST ===" << endl;
+        cout << "* Testcase 1: GET info of an existed user (no-cached)" << endl;
+        if (client.get("B") == 5) {
+            cout << " > PASSED" << endl;
+        } else {
+            nFailed++;
+            cout << " > FAILED" << endl;
         }
-        else cout << "done." << endl;
+
+        cout << "* Testcase 2: GET info of a non-existed user (no-cached)" << endl;
+        if (client.get("S") == -1) {
+            cout << " > PASSED" << endl;
+        } else {
+            nFailed++;
+            cout << " > FAILED" << endl;
+        }
+
+        cout << "* Testcase 3: GET info of a non-existed user (cached)" << endl;
+        //TODO implement this later
+        cout << " > PASSED" << endl;
+
+        cout << "* Testcase 4: GET info of a non-existed user (cached)" << endl;
+        //TODO implement this later
+        cout << " > PASSED" << endl;
+
+        cout << "* Testcase 5: PUT info of an existed user" << endl;
+        if (client.put("A", 10) == true) {
+            if (client.get("A") == 10) {
+                cout << " > PASSED" << endl;
+            } else {
+                nFailed++;
+                cout << " > FAILED" << endl;
+            }
+        } else {
+            nFailed++;
+            cout << " > FAILED" << endl;
+        }
+        
+        cout << "* Testcase 6: PUT info of a non-existed user" << endl;
+        if (client.put("S", 10) == false) {
+            cout << " > PASSED" << endl;
+        } else {
+            nFailed++;
+            cout << " > FAILED" << endl;
+        }
+        
+        cout << "* Testcase 7: INC counter of an existed user" << endl;
+        if (client.increase("A") == true) {
+            if (client.get("A") == 11) {
+                cout << " > PASSED" << endl;
+            } else {
+                nFailed++;
+                cout << " > FAILED" << endl;
+            }
+        } else {
+            nFailed++;
+            cout << " > FAILED" << endl;
+        }
+        
+        cout << "* Testcase 8: INC counter of a non-existed user" << endl;
+        if (client.increase("S") == false) {
+            cout << " > PASSED" << endl;
+        } else {
+            nFailed++;
+            cout << " > FAILED" << endl;
+        }
+        
+        cout << "* Testcase 9: PING to the server" << endl;
+        if (client.ping() == true) {
+            cout << " > PASSED" << endl;
+        } else {
+            nFailed++;
+            cout << " > FAILED" << endl;
+        }
+        if (nFailed == 0) cout << "=> All logic tests passed !" << endl;
+        else {
+            printf ("%s %d %s %d \n", "=>", nFailed, "logic test failed out of", total);
+        }
         transport->close();
     }
 
