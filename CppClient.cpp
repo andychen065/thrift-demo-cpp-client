@@ -52,23 +52,47 @@ using Poco::Thread;
 
 class MyWorker : public Runnable {
 public:
-
-    MyWorker(int k = -1) : Runnable(), n(k) {
+    double runTime;
+    double reqPerSecs;
+    
+    MyWorker(int k = -1, int _loop = 1) : Runnable(), n(k), loop(_loop) {
     }
 
-    virtual void run() {
+    void run() {
         boost::shared_ptr<TTransport> socket(new TSocket("localhost", 9090));
         boost::shared_ptr<TTransport> transport(new TBufferedTransport(socket));
         boost::shared_ptr<TProtocol> protocol(new TBinaryProtocol(transport));
         APIsClient client(protocol);
-        transport->open();
-        int res = client.get("D");
-        printf("Thread %d, res = %d \n", n, res);
-        transport->close();
+        try {
+            transport->open();
+            int res[loop];
+            double start = clock();
+            for (int i = 0; i < loop; i++){
+                res[i] = client.get("D");
+            }
+            double end = clock();
+            runTime = (end - start)/CLOCKS_PER_SEC;
+            reqPerSecs = loop / runTime;
+            while (!checkIfDone(res, loop)){};
+            // done 
+            printf("Thread %d done. \n", n);
+            transport->close();
+            
+        } catch (const TException& te) {
+            cout << te.what() << endl;
+        }
     }
-
 private:
     int n;
+    int loop;
+    bool checkIfDone(int res[], int length){
+        int count = 0;
+        for (int i = 0; i < length; i++) {
+            if (res[i] > 0) count++;
+        }
+        if (count == length) return true;
+        else return false;
+    }
 };
 
 class ViewCountClientApp : public Application
@@ -341,17 +365,24 @@ protected:
         }
         transport->close();
     }
-    
     void handleBenchmarkTest(const std::string& name, const std::string& value) {
         //TODO!
-        const int N = 5;
+        const int N = 100;
+        const int loop = 1000;
         MyWorker w[N];
-        for (int i = 0; i < N; i++) w[i] = MyWorker(i);
+        for (int i = 0; i < N; i++) w[i] = MyWorker(i, loop);
         Thread t[N];
+        
         for (int i = 0; i < N; i++) t[i].start(w[i]);
         for (int i = 0; i < N; i++) t[i].join(); // wait for all threads to end
-
         cout << endl << "Threads joined" << endl;
+        
+        double total = 0;
+        for (int i = 0; i < N; i++){
+            total += w[i].reqPerSecs;
+        }
+        double avgReqsPerSec = total / N;
+        printf("> Average requests per second: %f", avgReqsPerSec);
     }
 
     //	void handleDefine(const std::string& name, const std::string& value)
