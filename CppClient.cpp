@@ -68,7 +68,14 @@ public:
             int res[loop];
             double start = clock();
             for (int i = 0; i < loop; i++){
-                res[i] = client.get("D");
+                int v1 = rand() % 4;
+                switch(v1){
+                    case 0: res[i] = client.get("D"); break;
+                    case 1: res[i] = client.put("D", 123); break;
+                    case 2: res[i] = client.increase("D"); break;
+                    case 3: res[i] = client.ping(); break;
+                    default: break;
+                }
             }
             double end = clock();
             runTime = (end - start)/CLOCKS_PER_SEC;
@@ -243,7 +250,6 @@ protected:
         boost::shared_ptr<TProtocol> protocol(new TBinaryProtocol(transport));
         APIsClient client(protocol);
         transport->open();
-        //TODO handle the input
         std::string username;
         std::string value;
         std::string::size_type pos = _value.find('=');
@@ -368,7 +374,8 @@ protected:
     void handleBenchmarkTest(const std::string& name, const std::string& value) {
         //TODO!
         const int N = 100;
-        const int loop = 1000;
+        const int loop = 100;
+
         MyWorker w[N];
         for (int i = 0; i < N; i++) w[i] = MyWorker(i, loop);
         Thread t[N];
