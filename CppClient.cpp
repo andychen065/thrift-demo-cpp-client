@@ -54,7 +54,7 @@ class MyWorker : public Runnable {
 public:
     double runTime;
     double reqPerSecs;
-    
+
     MyWorker(int k = -1, int _loop = 1) : Runnable(), n(k), loop(_loop) {
     }
 
@@ -67,24 +67,28 @@ public:
             transport->open();
             int res[loop];
             double start = clock();
-            for (int i = 0; i < loop; i++){
+            for (int i = 0; i < loop; i++) {
                 int v1 = rand() % 4;
-                switch(v1){
-                    case 0: res[i] = client.get("D"); break;
-                    case 1: res[i] = client.put("D", 123); break;
-                    case 2: res[i] = client.increase("D"); break;
-                    case 3: res[i] = client.ping(); break;
+                switch (v1) {
+                    case 0: res[i] = client.get("D");
+                        break;
+                    case 1: res[i] = client.put("D", 123);
+                        break;
+                    case 2: res[i] = client.increase("D");
+                        break;
+                    case 3: res[i] = client.ping();
+                        break;
                     default: break;
                 }
             }
             double end = clock();
-            runTime = (end - start)/CLOCKS_PER_SEC;
+            runTime = (end - start) / CLOCKS_PER_SEC;
             reqPerSecs = loop / runTime;
-            while (!checkIfDone(res, loop)){};
+            //while (!checkIfDone(res, loop)){};
             // done 
             printf("Thread %d done. \n", n);
             transport->close();
-            
+
         } catch (const TException& te) {
             cout << te.what() << endl;
         }
@@ -92,7 +96,8 @@ public:
 private:
     int n;
     int loop;
-    bool checkIfDone(int res[], int length){
+
+    bool checkIfDone(int res[], int length) {
         int count = 0;
         for (int i = 0; i < length; i++) {
             if (res[i] > 0) count++;
@@ -170,7 +175,7 @@ protected:
                 .required(false)
                 .repeatable(false)
                 .callback(OptionCallback<ViewCountClientApp>(this, &ViewCountClientApp::handleLogicTest)));
-        
+
         options.addOption(
                 Option("benchmarkTest", "b", "start benchmark testing for the server")
                 .required(false)
@@ -328,7 +333,7 @@ protected:
             nFailed++;
             cout << " > FAILED" << endl;
         }
-        
+
         cout << "* Testcase 6: PUT info of a non-existed user" << endl;
         if (client.put("S", 10) == false) {
             cout << " > PASSED" << endl;
@@ -336,7 +341,7 @@ protected:
             nFailed++;
             cout << " > FAILED" << endl;
         }
-        
+
         cout << "* Testcase 7: INC counter of an existed user" << endl;
         if (client.increase("A") == true) {
             if (client.get("A") == 11) {
@@ -349,7 +354,7 @@ protected:
             nFailed++;
             cout << " > FAILED" << endl;
         }
-        
+
         cout << "* Testcase 8: INC counter of a non-existed user" << endl;
         if (client.increase("S") == false) {
             cout << " > PASSED" << endl;
@@ -357,7 +362,7 @@ protected:
             nFailed++;
             cout << " > FAILED" << endl;
         }
-        
+
         cout << "* Testcase 9: PING to the server" << endl;
         if (client.ping() == true) {
             cout << " > PASSED" << endl;
@@ -367,29 +372,31 @@ protected:
         }
         if (nFailed == 0) cout << "=> All logic tests passed !" << endl;
         else {
-            printf ("%s %d %s %d \n", "=>", nFailed, "logic test failed out of", total);
+            printf("%s %d %s %d \n", "=>", nFailed, "logic test failed out of", total);
         }
         transport->close();
     }
+
     void handleBenchmarkTest(const std::string& name, const std::string& value) {
         //TODO!
-        const int N = 100;
-        const int loop = 100;
+        const int N = 1000;
+        const int loop = 1000;
 
         MyWorker w[N];
         for (int i = 0; i < N; i++) w[i] = MyWorker(i, loop);
         Thread t[N];
-        
+
         for (int i = 0; i < N; i++) t[i].start(w[i]);
         for (int i = 0; i < N; i++) t[i].join(); // wait for all threads to end
-        cout << endl << "Threads joined" << endl;
-        
+        cout << "Threads joined" << endl;
+
         double total = 0;
-        for (int i = 0; i < N; i++){
+        for (int i = 0; i < N; i++) {
             total += w[i].reqPerSecs;
         }
         double avgReqsPerSec = total / N;
-        printf("> Average requests per second: %f", avgReqsPerSec);
+        setvbuf(stdout, NULL, _IOLBF, 0);
+        printf("> Average requests per second: %f \n", avgReqsPerSec);
     }
 
     //	void handleDefine(const std::string& name, const std::string& value)
